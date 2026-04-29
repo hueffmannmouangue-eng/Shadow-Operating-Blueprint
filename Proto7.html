@@ -1,0 +1,1789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PROTOCOL 7</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ── RESET ── */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;height:100%}
+body{font-family:'Syne',sans-serif;background:#080810;color:#e2e2f0;min-height:100%;overflow-x:hidden}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+input,textarea{font-family:inherit}
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#1e1e30;border-radius:2px}
+
+/* ── CSS VARS ── */
+:root{
+  --bg:#080810;
+  --bg2:#0d0d1a;
+  --surface:#111120;
+  --surface2:#181828;
+  --surface3:#1f1f32;
+  --border:rgba(255,255,255,0.06);
+  --border2:rgba(255,255,255,0.1);
+  --text:#e2e2f0;
+  --text2:rgba(226,226,240,0.55);
+  --text3:rgba(226,226,240,0.28);
+  --sidebar-w:260px;
+  --sidebar-w-collapsed:64px;
+  --header-h:0px;
+  /* day accents */
+  --c1:#7c6dfa;--c2:#38bdf8;--c3:#34d399;--c4:#fbbf24;--c5:#f87171;--c6:#a78bfa;--c7:#fb923c;
+  --csolo:#f472b6;--cnet:#2dd4bf;--cfocus:#60a5fa;--cself:#a3e635;
+  --active:#7c6dfa;
+  --r:14px;--rs:8px;
+}
+
+/* ── NOISE ── */
+body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");pointer-events:none;z-index:9000;opacity:.5}
+
+/* ════════════════════════════════════
+   SIDEBAR
+════════════════════════════════════ */
+#sidebar{
+  position:fixed;top:0;left:0;bottom:0;
+  width:var(--sidebar-w);
+  background:var(--surface);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  z-index:500;
+  transition:width .35s cubic-bezier(.4,0,.2,1);
+  overflow:hidden;
+}
+#sidebar.collapsed{width:var(--sidebar-w-collapsed)}
+
+.sb-header{
+  padding:20px 16px 16px;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--border);
+  min-height:64px;flex-shrink:0;
+}
+.sb-logo{
+  font-family:'Syne',sans-serif;font-weight:800;font-size:18px;
+  letter-spacing:3px;white-space:nowrap;overflow:hidden;
+  transition:opacity .2s;
+}
+.sb-logo span{color:var(--active)}
+#sidebar.collapsed .sb-logo{opacity:0;pointer-events:none}
+
+.sb-toggle{
+  width:32px;height:32px;border-radius:8px;
+  background:var(--surface2);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  color:var(--text2);font-size:14px;flex-shrink:0;
+  transition:all .2s;
+}
+.sb-toggle:hover{background:var(--surface3);color:var(--text)}
+
+.sb-nav{flex:1;padding:12px 8px;overflow-y:auto;overflow-x:hidden}
+
+.sb-item{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 10px;border-radius:10px;
+  color:var(--text2);font-size:13px;font-weight:500;
+  cursor:pointer;transition:all .2s;white-space:nowrap;
+  position:relative;
+  margin-bottom:2px;
+}
+.sb-item:hover{background:var(--surface2);color:var(--text)}
+.sb-item.active{background:rgba(124,109,250,0.12);color:var(--active)}
+.sb-item.active .sb-icon{color:var(--active)}
+.sb-icon{font-size:18px;flex-shrink:0;width:24px;text-align:center}
+.sb-label{transition:opacity .2s;overflow:hidden}
+#sidebar.collapsed .sb-label{opacity:0;pointer-events:none}
+
+.sb-section-label{
+  font-size:9px;letter-spacing:2.5px;text-transform:uppercase;
+  color:var(--text3);padding:12px 12px 4px;
+  white-space:nowrap;transition:opacity .2s;
+}
+#sidebar.collapsed .sb-section-label{opacity:0}
+
+.sb-divider{height:1px;background:var(--border);margin:8px 0}
+
+/* day badges in sidebar */
+.sb-day-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--surface3);flex-shrink:0;
+  margin-left:auto;transition:opacity .2s;
+}
+.sb-day-dot.done{background:#34d399}
+.sb-day-dot.active{background:var(--active)}
+#sidebar.collapsed .sb-day-dot{display:none}
+
+.sb-bottom{
+  padding:12px 8px;border-top:1px solid var(--border);flex-shrink:0;
+}
+
+.sb-progress-wrap{
+  padding:10px 10px;transition:opacity .2s;
+}
+#sidebar.collapsed .sb-progress-wrap{opacity:0;pointer-events:none}
+
+.sb-progress-label{
+  display:flex;justify-content:space-between;
+  font-size:10px;color:var(--text3);margin-bottom:6px;
+  font-family:'JetBrains Mono',monospace;
+}
+.sb-prog-bar{height:3px;background:var(--surface3);border-radius:2px;overflow:hidden}
+.sb-prog-fill{height:100%;background:var(--active);border-radius:2px;transition:width .6s ease}
+
+/* ════════════════════════════════════
+   MAIN
+════════════════════════════════════ */
+#main{
+  margin-left:var(--sidebar-w);
+  min-height:100vh;
+  transition:margin-left .35s cubic-bezier(.4,0,.2,1);
+  padding:40px 48px 80px;
+}
+#main.expanded{margin-left:var(--sidebar-w-collapsed)}
+
+@media(max-width:900px){
+  #sidebar{transform:translateX(-100%)}
+  #sidebar.mobile-open{transform:translateX(0);width:var(--sidebar-w)!important}
+  #main,#main.expanded{margin-left:0!important;padding:20px 20px 80px}
+  .mobile-header{display:flex!important}
+}
+
+.mobile-header{
+  display:none;position:fixed;top:0;left:0;right:0;
+  height:56px;background:var(--surface);
+  border-bottom:1px solid var(--border);
+  align-items:center;padding:0 16px;
+  z-index:400;gap:12px;
+}
+.mobile-header-logo{font-weight:800;font-size:16px;letter-spacing:2px}
+.mobile-header-logo span{color:var(--active)}
+
+/* ════════════════════════════════════
+   PAGES
+════════════════════════════════════ */
+.page{display:none;animation:fadeUp .4s ease both}
+.page.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── PAGE HEADER ── */
+.page-head{margin-bottom:40px}
+.page-eyebrow{
+  font-family:'JetBrains Mono',monospace;font-size:11px;
+  letter-spacing:3px;text-transform:uppercase;
+  color:var(--text3);margin-bottom:10px;
+}
+.page-title{
+  font-family:'Instrument Serif',serif;font-size:clamp(36px,5vw,56px);
+  line-height:.95;margin-bottom:12px;
+}
+.page-title em{font-style:italic;color:var(--active)}
+.page-sub{font-size:14px;color:var(--text2);line-height:1.6;max-width:560px}
+
+/* ════════════════════════════════════
+   HOME PAGE
+════════════════════════════════════ */
+#page-home .hero{
+  position:relative;min-height:calc(100vh - 120px);
+  display:flex;flex-direction:column;justify-content:center;
+  padding:40px 0;
+}
+.hero-glow{
+  position:absolute;top:-100px;left:-200px;
+  width:600px;height:600px;border-radius:50%;
+  background:radial-gradient(circle,rgba(124,109,250,.07) 0%,transparent 70%);
+  pointer-events:none;
+}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(124,109,250,.08);
+  border:1px solid rgba(124,109,250,.2);
+  border-radius:30px;padding:6px 16px;
+  font-family:'JetBrains Mono',monospace;
+  font-size:11px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--active);margin-bottom:28px;
+}
+.hero-title{
+  font-family:'Instrument Serif',serif;
+  font-size:clamp(60px,9vw,110px);
+  line-height:.88;margin-bottom:24px;
+  letter-spacing:-2px;
+}
+.hero-title .outline{
+  -webkit-text-stroke:1px rgba(124,109,250,.5);color:transparent;
+}
+.hero-desc{
+  font-size:16px;color:var(--text2);line-height:1.7;
+  max-width:520px;margin-bottom:48px;
+}
+
+.rules-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);padding:28px 32px;
+  max-width:620px;margin-bottom:40px;
+}
+.rules-card h3{
+  font-family:'JetBrains Mono',monospace;font-size:10px;
+  letter-spacing:3px;text-transform:uppercase;
+  color:var(--active);margin-bottom:18px;
+}
+.rules-list{list-style:none;display:flex;flex-direction:column;gap:10px}
+.rules-list li{
+  display:flex;gap:12px;font-size:13px;color:var(--text2);line-height:1.5;
+}
+.rules-list li::before{
+  content:'//';font-family:'JetBrains Mono',monospace;
+  color:var(--active);font-size:11px;flex-shrink:0;margin-top:2px;
+}
+
+.hero-cta{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+
+.btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:13px 28px;border-radius:50px;
+  font-family:'Syne',sans-serif;font-size:13px;font-weight:600;
+  letter-spacing:.5px;transition:all .3s;cursor:pointer;
+}
+.btn-fill{
+  background:var(--active);color:#fff;
+  box-shadow:0 0 30px rgba(124,109,250,.2);
+}
+.btn-fill:hover{transform:translateY(-2px);box-shadow:0 8px 40px rgba(124,109,250,.35)}
+.btn-ghost{
+  background:transparent;color:var(--text2);
+  border:1px solid var(--border2);
+}
+.btn-ghost:hover{background:var(--surface2);color:var(--text);border-color:var(--border2)}
+
+.hero-stats{
+  display:flex;gap:48px;margin-top:64px;
+  padding-top:40px;border-top:1px solid var(--border);
+}
+.h-stat .num{
+  font-family:'Instrument Serif',serif;
+  font-size:48px;color:var(--active);line-height:1;
+}
+.h-stat .lbl{
+  font-size:11px;color:var(--text3);
+  letter-spacing:2px;text-transform:uppercase;margin-top:4px;
+}
+
+/* ════════════════════════════════════
+   DAYS GRID
+════════════════════════════════════ */
+.days-overview{margin-bottom:32px}
+.overall-bar-wrap{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);padding:20px 24px;
+}
+.ob-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.ob-label{font-size:12px;color:var(--text2)}
+.ob-pct{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--active)}
+.ob-bar{height:5px;background:var(--surface3);border-radius:3px;overflow:hidden;margin-bottom:14px}
+.ob-fill{height:100%;background:var(--active);border-radius:3px;transition:width .7s ease}
+.streak-row{display:flex;gap:5px}
+.s-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--surface3);border:1px solid var(--border);
+  transition:all .3s;
+}
+.s-dot.done{border:none}
+.s-dot.todo{border:1px solid var(--border2)}
+
+.days-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+  gap:14px;
+}
+
+/* ── DAY CARD ── */
+.day-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);overflow:hidden;
+  cursor:pointer;transition:all .3s;
+  position:relative;
+  animation:fadeUp .4s ease both;
+}
+.day-card:hover:not(.locked){
+  border-color:var(--dc);
+  transform:translateY(-3px);
+  box-shadow:0 16px 48px rgba(0,0,0,.4);
+}
+.day-card.locked{opacity:.45;cursor:not-allowed}
+.day-card.locked::after{
+  content:'🔒';position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);font-size:28px;
+}
+.dc-top{height:2px;background:var(--dc)}
+.dc-body{padding:20px 20px 14px}
+.dc-row1{display:flex;justify-content:space-between;align-items:flex-start}
+.dc-day-num{
+  font-family:'JetBrains Mono',monospace;font-size:10px;
+  letter-spacing:3px;text-transform:uppercase;color:var(--dc);
+  margin-bottom:6px;
+}
+.dc-title{
+  font-family:'Instrument Serif',serif;font-size:20px;
+  line-height:1.2;padding-right:16px;
+}
+.dc-emoji{font-size:26px;flex-shrink:0;margin-top:2px}
+.dc-desc{font-size:12px;color:var(--text2);line-height:1.55;margin:10px 0 14px}
+.dc-prog-row{
+  display:flex;justify-content:space-between;
+  font-family:'JetBrains Mono',monospace;font-size:10px;
+  color:var(--text3);margin-bottom:6px;
+}
+.dc-prog-row span:last-child{color:var(--dc)}
+.dc-prog-bar{height:3px;background:var(--surface3);border-radius:2px;overflow:hidden}
+.dc-prog-fill{height:100%;background:var(--dc);border-radius:2px;transition:width .6s ease}
+.dc-footer{
+  padding:10px 20px 16px;
+  display:flex;justify-content:space-between;align-items:center;
+  border-top:1px solid var(--border);
+}
+.dc-info{font-size:11px;color:var(--text3)}
+.dc-status{
+  font-family:'JetBrains Mono',monospace;font-size:10px;
+  letter-spacing:.5px;padding:4px 10px;border-radius:20px;
+}
+.dc-status.complete{background:rgba(52,211,153,.1);color:#34d399}
+.dc-status.active{background:rgba(124,109,250,.12);color:var(--active)}
+.dc-status.available{background:rgba(251,191,36,.1);color:#fbbf24}
+.dc-status.locked{background:var(--surface3);color:var(--text3)}
+
+/* ════════════════════════════════════
+   DAY DETAIL
+════════════════════════════════════ */
+#page-detail{padding-bottom:80px}
+
+.detail-back{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:12px;color:var(--text2);margin-bottom:28px;
+  transition:color .2s;
+}
+.detail-back:hover{color:var(--text)}
+
+.detail-head{
+  display:grid;grid-template-columns:1fr auto;
+  gap:24px;align-items:start;
+  padding-bottom:32px;
+  border-bottom:1px solid var(--border);
+  margin-bottom:36px;
+}
+.dh-eyebrow{
+  font-family:'JetBrains Mono',monospace;font-size:10px;
+  letter-spacing:3px;text-transform:uppercase;
+  color:var(--dc2);margin-bottom:8px;
+}
+.dh-title{
+  font-family:'Instrument Serif',serif;
+  font-size:clamp(40px,6vw,72px);line-height:.9;
+  margin-bottom:16px;
+}
+.dh-quote{
+  font-family:'Instrument Serif',serif;font-style:italic;
+  font-size:16px;color:var(--text2);line-height:1.65;
+  border-left:2px solid var(--dc2);padding-left:16px;
+  max-width:540px;margin-bottom:20px;
+}
+.dh-prog{max-width:400px}
+.dh-prog-row{
+  display:flex;justify-content:space-between;
+  font-family:'JetBrains Mono',monospace;font-size:11px;
+  color:var(--text3);margin-bottom:7px;
+}
+.dh-prog-row span:last-child{color:var(--dc2)}
+.dh-bar{height:5px;background:var(--surface3);border-radius:3px;overflow:hidden}
+.dh-fill{height:100%;border-radius:3px;background:var(--dc2);transition:width .7s ease}
+.dh-emoji{font-size:72px;line-height:1;user-select:none}
+
+.detail-grid{
+  display:grid;grid-template-columns:1fr 320px;
+  gap:20px;align-items:start;
+}
+@media(max-width:960px){.detail-grid{grid-template-columns:1fr}}
+.detail-main{display:flex;flex-direction:column;gap:16px}
+.detail-side{display:flex;flex-direction:column;gap:14px;position:sticky;top:20px}
+
+/* ── SECTION CARD ── */
+.sc{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);overflow:hidden;
+  animation:fadeUp .35s ease both;
+}
+.sc-head{
+  padding:14px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.sc-title{
+  font-family:'JetBrains Mono',monospace;font-size:10px;
+  letter-spacing:2.5px;text-transform:uppercase;color:var(--dc2);
+}
+.sc-meta{font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace}
+.sc-body{padding:18px 20px}
+
+/* ── CHECKLIST ── */
+.cl{list-style:none;display:flex;flex-direction:column;gap:8px}
+.cl-item{
+  display:flex;gap:12px;align-items:flex-start;
+  padding:12px 14px;background:var(--surface2);
+  border:1px solid var(--border);border-radius:var(--rs);
+  cursor:pointer;transition:all .2s;user-select:none;
+}
+.cl-item:hover{border-color:var(--dc2)}
+.cl-item.checked{
+  opacity:.55;background:rgba(52,211,153,.04);
+  border-color:rgba(52,211,153,.15);
+}
+.cl-box{
+  width:18px;height:18px;border-radius:4px;
+  border:1.5px solid var(--border2);flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .2s;margin-top:1px;
+}
+.cl-item.checked .cl-box{background:#34d399;border-color:#34d399}
+.cl-check{display:none}
+.cl-item.checked .cl-check{display:block}
+.cl-text{flex:1}
+.cl-label{font-size:13px;font-weight:500;line-height:1.35;color:var(--text)}
+.cl-desc{font-size:11px;color:var(--text2);margin-top:3px;line-height:1.5}
+.cl-item.checked .cl-label,.cl-item.checked .cl-desc{text-decoration:line-through}
+
+/* ── FILL CARDS ── */
+.fill-item{margin-bottom:12px}
+.fill-prompt{
+  font-size:12px;color:var(--text2);margin-bottom:8px;
+  font-style:italic;line-height:1.5;
+}
+.fill-input{
+  width:100%;background:var(--bg2);
+  border:1px solid var(--border);border-radius:var(--rs);
+  padding:10px 13px;color:var(--text);
+  font-size:13px;line-height:1.5;
+  resize:vertical;min-height:72px;transition:border-color .2s;
+}
+.fill-input:focus{outline:none;border-color:var(--dc2)}
+.fill-input::placeholder{color:var(--text3)}
+
+/* ── PHOTO UPLOAD ── */
+.photo-zone{
+  border:2px dashed var(--border);border-radius:var(--r);
+  padding:28px;text-align:center;cursor:pointer;
+  transition:all .2s;
+}
+.photo-zone:hover{border-color:var(--dc2);background:rgba(255,255,255,.02)}
+.photo-zone input{display:none}
+.pz-icon{font-size:26px;margin-bottom:8px}
+.pz-text{font-size:13px;color:var(--text2);margin-bottom:3px}
+.pz-hint{font-size:11px;color:var(--text3)}
+.photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.photo-thumb{aspect-ratio:1;border-radius:var(--rs);overflow:hidden;position:relative;cursor:pointer}
+.photo-thumb img{width:100%;height:100%;object-fit:cover}
+.photo-del{
+  position:absolute;top:4px;right:4px;
+  width:20px;height:20px;background:rgba(0,0,0,.75);
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:10px;color:#fff;opacity:0;transition:opacity .2s;
+}
+.photo-thumb:hover .photo-del{opacity:1}
+
+/* ── SIDEBAR WIDGETS ── */
+.widget{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);overflow:hidden;
+}
+.w-head{
+  padding:13px 18px;border-bottom:1px solid var(--border);
+  font-family:'JetBrains Mono',monospace;font-size:10px;
+  letter-spacing:2px;text-transform:uppercase;color:var(--dc2);
+}
+.w-body{padding:16px 18px}
+
+/* Timer */
+.timer-wrap{text-align:center}
+.timer-display{
+  font-family:'Instrument Serif',serif;font-size:58px;
+  color:var(--dc2);line-height:1;margin-bottom:16px;letter-spacing:-1px;
+}
+.timer-btns{display:flex;gap:6px;justify-content:center}
+.t-btn{
+  padding:7px 16px;border-radius:20px;border:1px solid var(--border2);
+  background:var(--surface2);color:var(--text2);
+  font-size:12px;font-family:'Syne',sans-serif;
+  transition:all .2s;
+}
+.t-btn:hover{border-color:var(--dc2);color:var(--dc2)}
+.t-btn.on{background:rgba(124,109,250,.1);border-color:var(--dc2);color:var(--dc2)}
+
+/* Mood */
+.mood-row{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+.mood-btn{
+  padding:8px 10px;border-radius:8px;font-size:18px;
+  background:var(--surface2);border:1px solid var(--border);
+  transition:all .2s;
+}
+.mood-btn:hover,.mood-btn.sel{border-color:var(--dc2);background:rgba(124,109,250,.08)}
+
+/* Score ring */
+.score-wrap{display:flex;justify-content:center;margin-bottom:12px;padding-top:8px}
+.score-ring{
+  width:80px;height:80px;border-radius:50%;
+  border:2px solid var(--dc2);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+}
+.score-num{
+  font-family:'Instrument Serif',serif;font-size:26px;
+  color:var(--dc2);line-height:1;
+}
+.score-lbl{font-size:9px;color:var(--text3);letter-spacing:1px;text-transform:uppercase}
+
+/* Stats mini */
+.mini-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
+.ms-box{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--rs);padding:10px 8px;text-align:center;
+}
+.ms-num{
+  font-family:'Instrument Serif',serif;font-size:22px;
+  color:var(--dc2);line-height:1;
+}
+.ms-lbl{font-size:9px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-top:2px}
+
+/* Insight */
+.insight-text{font-size:13px;color:var(--text2);line-height:1.7}
+.insight-text strong{color:var(--text)}
+
+/* Complete btn */
+.complete-btn{
+  width:100%;padding:15px;border-radius:var(--r);
+  border:1.5px solid var(--dc2);background:transparent;
+  color:var(--dc2);font-family:'Syne',sans-serif;
+  font-size:14px;font-weight:600;letter-spacing:.5px;
+  transition:all .3s;margin-top:6px;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.complete-btn:hover:not(:disabled){
+  background:var(--dc2);color:#fff;
+  box-shadow:0 8px 32px rgba(0,0,0,.3);
+}
+.complete-btn:disabled{opacity:.35;cursor:not-allowed}
+.complete-btn.done{
+  background:rgba(52,211,153,.08);border-color:#34d399;color:#34d399;
+}
+
+/* ════════════════════════════════════
+   SOLO CHALLENGES
+════════════════════════════════════ */
+.cat-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:28px}
+.cat-tab{
+  padding:7px 16px;border-radius:20px;
+  border:1px solid var(--border);background:var(--surface);
+  font-size:12px;color:var(--text2);transition:all .2s;
+}
+.cat-tab:hover{background:var(--surface2);color:var(--text)}
+.cat-tab.active{border-color:var(--csolo);color:var(--csolo);background:rgba(244,114,182,.06)}
+.cat-tab[data-cat="focus"].active{border-color:var(--cfocus);color:var(--cfocus);background:rgba(96,165,250,.06)}
+.cat-tab[data-cat="network"].active{border-color:var(--cnet);color:var(--cnet);background:rgba(45,212,191,.06)}
+.cat-tab[data-cat="self"].active{border-color:var(--cself);color:var(--cself);background:rgba(163,230,53,.06)}
+
+.solo-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+  gap:12px;
+}
+.ch-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);overflow:hidden;
+  transition:all .3s;animation:fadeUp .35s ease both;
+}
+.ch-card:hover{transform:translateY(-2px);box-shadow:0 12px 36px rgba(0,0,0,.3)}
+.ch-top{height:2px}
+.ch-body{padding:16px 18px 12px}
+.ch-cat{
+  font-family:'JetBrains Mono',monospace;font-size:9px;
+  letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;
+}
+.ch-title{font-family:'Instrument Serif',serif;font-size:17px;line-height:1.25;margin-bottom:6px}
+.ch-desc{font-size:12px;color:var(--text2);line-height:1.55;margin-bottom:12px}
+.ch-tags{display:flex;gap:6px;flex-wrap:wrap}
+.ch-tag{
+  font-size:10px;background:var(--surface2);border:1px solid var(--border);
+  border-radius:20px;padding:2px 8px;color:var(--text3);
+}
+.ch-footer{
+  padding:10px 18px;border-top:1px solid var(--border);
+  display:flex;justify-content:space-between;align-items:center;
+}
+.ch-num{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3)}
+.ch-done-btn{
+  padding:5px 14px;border-radius:20px;
+  border:1px solid var(--border);background:var(--surface2);
+  font-size:11px;color:var(--text2);transition:all .2s;
+}
+.ch-done-btn:hover{border-color:var(--csolo);color:var(--csolo)}
+.ch-done-btn.done{background:rgba(52,211,153,.08);border-color:#34d399;color:#34d399}
+
+/* ════════════════════════════════════
+   PRINCIPLES — COLLAPSIBLE
+════════════════════════════════════ */
+.principles-grid{display:flex;flex-direction:column;gap:10px}
+
+.pcat{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);overflow:hidden;
+  animation:fadeUp .35s ease both;
+}
+.pcat-header{
+  padding:16px 20px;display:flex;align-items:center;
+  justify-content:space-between;cursor:pointer;
+  transition:background .2s;user-select:none;
+}
+.pcat-header:hover{background:var(--surface2)}
+.pcat-left{display:flex;align-items:center;gap:14px}
+.pcat-icon{font-size:22px;flex-shrink:0}
+.pcat-cat{
+  font-family:'JetBrains Mono',monospace;font-size:9px;
+  letter-spacing:2px;text-transform:uppercase;color:var(--principles-color,#2dd4bf);
+  margin-bottom:3px;
+}
+.pcat-title{font-family:'Instrument Serif',serif;font-size:17px;line-height:1.2}
+.pcat-right{display:flex;align-items:center;gap:10px}
+.pcat-count{
+  font-family:'JetBrains Mono',monospace;font-size:10px;
+  color:var(--text3);
+}
+.pcat-chevron{
+  width:24px;height:24px;border-radius:6px;
+  background:var(--surface2);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;color:var(--text2);
+  transition:transform .3s;flex-shrink:0;
+}
+.pcat.open .pcat-chevron{transform:rotate(180deg)}
+.pcat-body{
+  display:none;padding:0 20px 16px;
+  border-top:1px solid var(--border);
+}
+.pcat.open .pcat-body{display:block;animation:fadeUp .25s ease both}
+.p-list{list-style:none;display:flex;flex-direction:column;gap:7px;padding-top:16px}
+.p-list li{
+  font-size:13px;color:var(--text2);line-height:1.55;
+  padding:10px 14px;background:var(--surface2);
+  border-radius:var(--rs);border:1px solid var(--border);
+  border-left:2px solid var(--principles-color,#2dd4bf);
+}
+
+/* ════════════════════════════════════
+   TOAST
+════════════════════════════════════ */
+#toast{
+  position:fixed;bottom:24px;left:50%;
+  transform:translateX(-50%) translateY(12px);
+  background:var(--surface);border:1px solid var(--border2);
+  border-radius:30px;padding:10px 22px;
+  font-size:13px;z-index:9999;
+  opacity:0;transition:all .25s;pointer-events:none;
+  white-space:nowrap;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ════════════════════════════════════
+   CONFETTI
+════════════════════════════════════ */
+.cfetti{
+  position:fixed;pointer-events:none;z-index:9998;
+  font-size:22px;animation:cfly 1.4s ease forwards;
+}
+@keyframes cfly{
+  0%{opacity:1;transform:translateY(0) scale(1) rotate(0deg)}
+  100%{opacity:0;transform:translateY(-180px) scale(.5) rotate(180deg)}
+}
+
+/* ════════════════════════════════════
+   RESPONSIVE / MISC
+════════════════════════════════════ */
+@media(max-width:900px){
+  .detail-head{grid-template-columns:1fr;gap:16px}
+  .dh-emoji{display:none}
+  .hero-stats{gap:24px}
+  .h-stat .num{font-size:36px}
+}
+</style>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<!-- ══ SIDEBAR ══════════════════════════════════════ -->
+<div id="sidebar">
+  <div class="sb-header">
+    <div class="sb-logo">PROTO<span>7</span></div>
+    <button class="sb-toggle" onclick="toggleSidebar()">☰</button>
+  </div>
+
+  <div class="sb-nav">
+    <div class="sb-section-label">NAVIGATION</div>
+    <div class="sb-item active" onclick="nav('home')">
+      <span class="sb-icon">⚡</span>
+      <span class="sb-label">Overview</span>
+    </div>
+    <div class="sb-item" onclick="nav('days')">
+      <span class="sb-icon">📅</span>
+      <span class="sb-label">7-Day Plan</span>
+    </div>
+    <div class="sb-item" onclick="nav('solo')">
+      <span class="sb-icon">🎯</span>
+      <span class="sb-label">Solo Challenges</span>
+    </div>
+    <div class="sb-item" onclick="nav('principles')">
+      <span class="sb-icon">🧠</span>
+      <span class="sb-label">Principles</span>
+    </div>
+
+    <div class="sb-divider"></div>
+    <div class="sb-section-label">DAYS</div>
+    <div id="sb-days-list"><!-- injected --></div>
+  </div>
+
+  <div class="sb-bottom">
+    <div class="sb-progress-wrap">
+      <div class="sb-progress-label">
+        <span>Progress</span>
+        <span id="sb-pct">0%</span>
+      </div>
+      <div class="sb-prog-bar">
+        <div class="sb-prog-fill" id="sb-prog-fill" style="width:0%"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MOBILE HEADER ════════════════════════════════ -->
+<div class="mobile-header">
+  <button onclick="toggleMobileSidebar()" style="font-size:18px;color:var(--text2)">☰</button>
+  <div class="mobile-header-logo">PROTO<span>7</span></div>
+</div>
+
+<!-- ══ MAIN ══════════════════════════════════════════ -->
+<div id="main">
+
+  <!-- ─── HOME ─── -->
+  <div id="page-home" class="page active">
+    <div class="hero">
+      <div class="hero-glow"></div>
+      <div class="hero-badge">⚡ Science-Backed Protocol</div>
+      <h1 class="hero-title">
+        BUILD YOUR<br>
+        <span class="outline">CONFIDENCE</span>
+      </h1>
+      <p class="hero-desc">Cut cheap dopamine. Reclaim focus. Own your presence. A 7-day system built on every principle that actually moves the needle.</p>
+
+      <div class="rules-card">
+        <h3>// How To Use This</h3>
+        <ul class="rules-list">
+          <li>Complete each day fully before the next unlocks. No skipping.</li>
+          <li>Every day has tasks, reflection prompts, a timer, and a photo notes section.</li>
+          <li>Solo Challenges are bonus missions — tackle them any time during the 7 days.</li>
+          <li>Principles is your permanent mental OS — study it between days.</li>
+          <li>Miss a day? You restart that day. Actions have repercussions.</li>
+          <li>Everything saves locally in your browser automatically.</li>
+        </ul>
+      </div>
+
+      <div class="hero-cta">
+        <button class="btn btn-fill" onclick="nav('days')">Begin Protocol →</button>
+        <button class="btn btn-ghost" onclick="nav('principles')">Read Principles</button>
+      </div>
+
+      <div class="hero-stats">
+        <div class="h-stat"><div class="num">7</div><div class="lbl">Days</div></div>
+        <div class="h-stat"><div class="num">70+</div><div class="lbl">Tasks</div></div>
+        <div class="h-stat"><div class="num">130+</div><div class="lbl">Challenges</div></div>
+        <div class="h-stat"><div class="num">60+</div><div class="lbl">Principles</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── DAYS ─── -->
+  <div id="page-days" class="page">
+    <div class="page-head">
+      <div class="page-eyebrow">// Your Plan</div>
+      <h1 class="page-title">7-Day <em>Reset</em></h1>
+      <p class="page-sub">Each day unlocks only after completing the previous. Work through them in sequence.</p>
+    </div>
+    <div class="days-overview">
+      <div class="overall-bar-wrap">
+        <div class="ob-row">
+          <span class="ob-label">Overall Completion</span>
+          <span class="ob-pct" id="ob-pct">0%</span>
+        </div>
+        <div class="ob-bar"><div class="ob-fill" id="ob-fill" style="width:0%"></div></div>
+        <div class="streak-row" id="streak-row"></div>
+      </div>
+    </div>
+    <div class="days-grid" id="days-grid"></div>
+  </div>
+
+  <!-- ─── DAY DETAIL ─── -->
+  <div id="page-detail" class="page">
+    <button class="detail-back" onclick="nav('days')">← Back to all days</button>
+    <div id="detail-inner"></div>
+  </div>
+
+  <!-- ─── SOLO ─── -->
+  <div id="page-solo" class="page">
+    <div class="page-head">
+      <div class="page-eyebrow">// Bonus Missions</div>
+      <h1 class="page-title">Solo <em>Challenges</em></h1>
+      <p class="page-sub">Things to do alone. Each one reveals, builds, or strips something. Start any time.</p>
+    </div>
+    <div class="cat-tabs" id="cat-tabs">
+      <button class="cat-tab active" data-cat="all" onclick="filterSolo('all',this)">All</button>
+      <button class="cat-tab" data-cat="confidence" onclick="filterSolo('confidence',this)">Confidence</button>
+      <button class="cat-tab" data-cat="focus" onclick="filterSolo('focus',this)">Focus</button>
+      <button class="cat-tab" data-cat="network" onclick="filterSolo('network',this)">Network</button>
+      <button class="cat-tab" data-cat="self" onclick="filterSolo('self',this)">Self-Knowledge</button>
+      <button class="cat-tab" data-cat="experience" onclick="filterSolo('experience',this)">Experience</button>
+      <button class="cat-tab" data-cat="creative" onclick="filterSolo('creative',this)">Creative</button>
+    </div>
+    <div class="solo-grid" id="solo-grid"></div>
+  </div>
+
+  <!-- ─── PRINCIPLES ─── -->
+  <div id="page-principles" class="page">
+    <div class="page-head">
+      <div class="page-eyebrow">// Mental OS</div>
+      <h1 class="page-title">Core <em>Principles</em></h1>
+      <p class="page-sub">Your permanent reference. Click any category to expand. Study these daily.</p>
+    </div>
+    <div class="principles-grid" id="principles-grid"></div>
+  </div>
+
+</div><!-- /#main -->
+
+<script>
+/* ═══════════════════════════════════════
+   DATA
+═══════════════════════════════════════ */
+const DAYS=[
+  {id:1,title:"Cut Cheap Dopamine",emoji:"🧠",color:"#7c6dfa",
+   quote:"Your brain needs boredom again to focus. Boredom is not the enemy — it's the cure.",
+   desc:"Eliminate all low-effort digital stimulation. Reset your dopamine baseline and prove you control your attention.",
+   tasks:[
+     {id:"d1t1",l:"Delete or log out of all short-form apps",d:"TikTok, Reels, Shorts. Off for the entire day."},
+     {id:"d1t2",l:"Zero endless scrolling today",d:"Instagram feed, Twitter/X, YouTube. All of it. Off."},
+     {id:"d1t3",l:"Sit in silence for 30 minutes",d:"No music, no podcast, no phone. Just you and your thoughts."},
+     {id:"d1t4",l:"20-min walk without headphones",d:"Notice what your mind does when there is no noise to hide behind."},
+     {id:"d1t5",l:"Spend 1 hour on a single creative task",d:"Write, draw, plan, build. One thing. No tab-switching."},
+     {id:"d1t6",l:"Write down your 3 biggest distractions",d:"Awareness is the first step to control."},
+     {id:"d1t7",l:"Phone in another room from 8pm onwards",d:"Your brain learns rest when you stop feeding it stimulation at night."},
+   ],
+   fills:[
+     {id:"d1f1",p:"When I removed my distractions today, I noticed…",ph:"What thoughts appeared? What did you feel?"},
+     {id:"d1f2",p:"When I felt the urge to scroll, I instead chose to…",ph:"Describe what you did and how it felt."},
+     {id:"d1f3",p:"By the end of today, my mental state feels…",ph:"Clearer? More anxious? Bored? Be honest."},
+   ],
+   timer:{label:"Deep Work Session",min:45},
+   review:"How focused were you today?",
+   insight:"Your brain needs boredom to recalibrate. Every time you resist the urge to scroll, you win a small battle against dopamine dependency. <strong>Boredom is the price of focus.</strong>"},
+
+  {id:2,title:"Remove Decisions",emoji:"⚡",color:"#38bdf8",
+   quote:"Fewer decisions = more mental energy. Design your environment so you don't have to think about the basics.",
+   desc:"Every micro-decision drains willpower. Today you simplify ruthlessly — plan tomorrow tonight and eliminate choice fatigue.",
+   tasks:[
+     {id:"d2t1",l:"Plan tomorrow's entire schedule tonight",d:"Write it down. Specific times, specific tasks. No vagueness."},
+     {id:"d2t2",l:"Eat 2 simple planned meals — no decisions at mealtime",d:"The same breakfast for 30 days builds warrior routine."},
+     {id:"d2t3",l:"Pick your outfit and lay it out the night before",d:"Small act, massive signal to your brain: you are in control."},
+     {id:"d2t4",l:"Make one hard decision without asking anyone",d:"Builds self-trust. You don't need external validation to decide."},
+     {id:"d2t5",l:"Identify and eliminate 3 daily micro-decisions",d:"What choices can you automate or pre-decide permanently?"},
+     {id:"d2t6",l:"Wake up and move immediately — no phone first",d:"Use phone only after completing your main morning task."},
+     {id:"d2t7",l:"Complete your #1 most important task before noon",d:"Whatever matters most gets done when willpower is highest."},
+   ],
+   fills:[
+     {id:"d2f1",p:"The decisions I chose to eliminate permanently are…",ph:"Be specific. What will you automate or pre-decide?"},
+     {id:"d2f2",p:"When I had to make a hard decision alone today, I felt…",ph:"Confident? Anxious? Describe the internal process."},
+     {id:"d2f3",p:"My energy level compared to yesterday is…",ph:"More energy? Less decision fatigue? Note the difference."},
+   ],
+   timer:{label:"Single-Task Focus Block",min:45},
+   review:"How much mental energy did you save today?",
+   insight:"Decision fatigue is real. Successful operators pre-decide everything they can. <strong>The goal is to make fewer decisions, better.</strong> Eliminate the trivial so you can dominate the critical."},
+
+  {id:3,title:"Calm Your Mind",emoji:"🌊",color:"#34d399",
+   quote:"A calm mind focuses better. Stillness is not weakness — it's the foundation of unshakeable presence.",
+   desc:"Confidence is presence. Presence is calm. Today you train your nervous system to stay grounded under pressure.",
+   tasks:[
+     {id:"d3t1",l:"10 minutes of slow deliberate breathing on waking",d:"4 counts in, hold 4, out 6. Repeat. Rewires your baseline."},
+     {id:"d3t2",l:"Morning sunlight — 10 minutes outside without phone",d:"Walk, sit, just exist. Cortisol regulation, circadian reset."},
+     {id:"d3t3",l:"Eat one full meal alone in public — no phone",d:"Reveals how much you rely on external distraction."},
+     {id:"d3t4",l:"Sit with boredom for 15 minutes — don't escape it",d:"Boredom reveals your unmet needs. Let it surface them."},
+     {id:"d3t5",l:"When energy gets uncomfortable today — stay present",d:"Don't reach for your phone. Discomfort builds presence."},
+     {id:"d3t6",l:"Move slow intentionally — walk and speak slower",d:"Slow movement signals emotional control. Core of charisma."},
+     {id:"d3t7",l:"Journal your worst-case scenario for your biggest fear",d:"Fear shrinks when you face it directly on paper."},
+   ],
+   fills:[
+     {id:"d3f1",p:"My biggest fear right now is…",ph:"Write it out completely. Don't soften it."},
+     {id:"d3f2",p:"When I sat in silence today, what surfaced was…",ph:"Thoughts, feelings, realizations. Write uncensored."},
+     {id:"d3f3",p:"My natural movement speed when not thinking about it is…",ph:"Fast? Rushed? What does this reveal about your inner state?"},
+   ],
+   timer:{label:"Breathwork + Presence",min:20},
+   review:"How calm and grounded did you feel today?",
+   insight:"Presence is the foundation of all charisma. You cannot be charismatic while anxious. <strong>Train your nervous system for stillness</strong> and people will feel it before you say a word."},
+
+  {id:4,title:"Do One Thing At a Time",emoji:"🎯",color:"#fbbf24",
+   quote:"45 minutes of work. Short break. One task. No multitasking. This is how real output gets built.",
+   desc:"Multitasking destroys quality and confidence. Today you go mono-task. One thing until it is done.",
+   tasks:[
+     {id:"d4t1",l:"Complete 3 × 45-min focused work blocks",d:"One task per block. Phone away. Use the timer below."},
+     {id:"d4t2",l:"Complete at least ONE task fully from start to finish",d:"Finishing builds momentum. Half-done work robs confidence."},
+     {id:"d4t3",l:"No multitasking — catch yourself and restart the block",d:"The moment you switch tasks, the block is void."},
+     {id:"d4t4",l:"Write tonight what you actually COMPLETED today",d:"Not what you started. What you FINISHED."},
+     {id:"d4t5",l:"Top 3 tasks for tomorrow — in order of importance",d:"Clarity before bed means execution in the morning."},
+     {id:"d4t6",l:"Train alone without headphones or music",d:"Notice the difference between discipline and motivation."},
+     {id:"d4t7",l:"Set a consequence for any missed task tomorrow",d:"100 push-ups or cold shower. Actions have repercussions."},
+   ],
+   fills:[
+     {id:"d4f1",p:"The task I finally finished that I'd been avoiding was…",ph:"How did it feel to complete it fully?"},
+     {id:"d4f2",p:"My biggest distraction during focus blocks today was…",ph:"What pulled you? What will you do differently?"},
+     {id:"d4f3",p:"The difference in my output today vs. before this protocol is…",ph:"Be honest and specific about what changed."},
+   ],
+   timer:{label:"45-Min Deep Work Block",min:45},
+   review:"How well did you stay mono-tasked today?",
+   insight:"Real output requires real focus. Multitasking produces shallow work and shallow confidence. <strong>One thing. Done completely. Every time.</strong> This is how trust in yourself is rebuilt."},
+
+  {id:5,title:"Control Your Presence",emoji:"👁",color:"#f87171",
+   quote:"Your physical presence is your charisma engine: breath, posture, stillness, awareness. When your body leads, your energy follows.",
+   desc:"Charisma isn't a gift — it's a practice. Today you consciously develop every physical signal that commands respect.",
+   tasks:[
+     {id:"d5t1",l:"Maintain eye contact during every conversation",d:"Intensity is attractive when calm. Your eyes carry more weight than your voice."},
+     {id:"d5t2",l:"Zero phone use while someone is speaking to you",d:"Discomfort builds presence. Your ability to stay here is the charisma others feel."},
+     {id:"d5t3",l:"Don't fill silence with nervous laughter or filler words",d:"Silence is magnetic when you're grounded."},
+     {id:"d5t4",l:"Say something once — clearly and with conviction",d:"Precision feels confident. Rambles feel needy."},
+     {id:"d5t5",l:"Spine tall, shoulders back — hold posture all day",d:"Your body language speaks before you do."},
+     {id:"d5t6",l:"Don't apologize for things you didn't do wrong",d:"Unnecessary apologies signal low status."},
+     {id:"d5t7",l:"End one conversation at its highest point and walk away",d:"Leave while they want more. Most people drag conversations until they die."},
+   ],
+   fills:[
+     {id:"d5f1",p:"The moment I held presence and it changed the interaction…",ph:"Describe the situation and what you noticed."},
+     {id:"d5f2",p:"My biggest social habit that signals low confidence is…",ph:"Oversharing? Nervous laughter? Explaining too much?"},
+     {id:"d5f3",p:"When I held silence instead of filling it, the result was…",ph:"Did they lean in? Feel uncomfortable? What happened?"},
+   ],
+   timer:{label:"Presence Practice",min:20},
+   review:"How commanding was your presence today?",
+   insight:"Charisma isn't about talking more — it's about being more. <strong>Your eyes, posture, and stillness communicate before your words do.</strong> Control the signal, and you control the room."},
+
+  {id:6,title:"Finish What You Start",emoji:"🔥",color:"#a78bfa",
+   quote:"Discipline grows when you stick to your promises. Accumulating small victories helps your brain trust you again.",
+   desc:"Every unfinished task is a micro-betrayal of yourself. Your brain tracks every promise you break. Today you rebuild micro-integrity.",
+   tasks:[
+     {id:"d6t1",l:"Complete every task on today's list — no partial credit",d:"Promise 10 push-ups? Do 10. Not 9. This rewires self-trust."},
+     {id:"d6t2",l:"Do one thing you've been procrastinating for over a week",d:"You know what it is. No more delays."},
+     {id:"d6t3",l:"Reflect on past relationships — spot your patterns",d:"Your patterns across relationships become obvious when you look clearly."},
+     {id:"d6t4",l:"Do something you're bad at — alone, without quitting early",d:"Ego dissolves when you embrace incompetence. Growth begins there."},
+     {id:"d6t5",l:"Make 3 micro-commitments and honor every single one",d:"Sleep by a set time. A specific exercise. Read 10 pages exactly."},
+     {id:"d6t6",l:"Write what you want if no one judged you",d:"Truth appears without an audience. What do you actually want?"},
+     {id:"d6t7",l:"Celebrate one win today — genuinely, without minimizing it",d:"Confidence is built through consistent progress. Acknowledge small wins."},
+   ],
+   fills:[
+     {id:"d6f1",p:"The thing I'd been procrastinating that I finally did was…",ph:"How did completing it make you feel?"},
+     {id:"d6f2",p:"The pattern I noticed in my past relationships is…",ph:"What do you keep doing? What do you keep attracting?"},
+     {id:"d6f3",p:"What I actually want — if no one was judging me — is…",ph:"Career, relationships, lifestyle. The uncensored version."},
+   ],
+   timer:{label:"Accountability Sprint",min:45},
+   review:"How much integrity did you bring today?",
+   insight:"Every unkept promise to yourself is a micro-betrayal. Your brain tracks all of them. <strong>Micro-integrity rebuilds self-trust.</strong> Finish what you start. Always."},
+
+  {id:7,title:"Control Your Environment",emoji:"🏛",color:"#fb923c",
+   quote:"Same workspace. Same start time. Same routine. Your brain learns when it's time to perform. A solid routine creates warriors.",
+   desc:"Today you build the permanent architecture for who you're becoming. Chaos creates victims. Design your environment.",
+   tasks:[
+     {id:"d7t1",l:"Design your permanent morning routine in full detail",d:"Wake time, first action, no phone until main task complete."},
+     {id:"d7t2",l:"Set up a dedicated workspace — nothing else happens there",d:"Same space = focus mode activates automatically."},
+     {id:"d7t3",l:"Forgive someone — privately, not to them, just internally",d:"Releases weight you didn't know you were carrying. For you, not them."},
+     {id:"d7t4",l:"Ask yourself: Who am I when no one's watching?",d:"That answer is the real you. Write it honestly. Build toward that person."},
+     {id:"d7t5",l:"Write your 3 non-negotiable daily standards going forward",d:"What you do every day regardless of mood or circumstance."},
+     {id:"d7t6",l:"Identify your 3 biggest confidence killers + their antidotes",d:"What specific habits have been killing confidence? What replaces each?"},
+     {id:"d7t7",l:"Write a letter to yourself — who you are after 7 days vs before",d:"Compare. Celebrate the gap. Commit to never going back."},
+   ],
+   fills:[
+     {id:"d7f1",p:"My 3 non-negotiable daily standards from now on are…",ph:"Specific, actionable, measurable. Not vague intentions."},
+     {id:"d7f2",p:"Who I am when no one is watching is…",ph:"Honest self-assessment. What do you default to in private?"},
+     {id:"d7f3",p:"After 7 days, the biggest shift I notice in myself is…",ph:"Behavior, mindset, energy, presence. What actually changed?"},
+   ],
+   timer:{label:"Final Reflection",min:30},
+   review:"How much have you grown over 7 days?",
+   insight:"Environment is the silent architect of behavior. <strong>Design your environment to produce the person you want to be</strong> — and that person will appear on schedule, every day, without needing motivation."},
+];
+
+/* ─── SOLO CHALLENGES (deduplicated, all categories) ─── */
+const CHALLENGES=[
+  /* CONFIDENCE */
+  {id:"c01",cat:"confidence",t:"Maintain Eye Contact for 30s",d:"In the next conversation, hold eye contact without breaking. Let the silence sit. Your intensity is attractive when calm.",time:"1 Convo",diff:"Medium"},
+  {id:"c02",cat:"confidence",t:"End a Conversation at Its Peak",d:"When energy is rising, say: 'I've gotta bounce, but I'm glad we talked.' Leave while they want more. Practice 3 times.",time:"1 Day",diff:"Medium"},
+  {id:"c03",cat:"confidence",t:"Make a Hard Decision Alone",d:"No asking for opinions. No validation-seeking. Decide and commit. Builds self-trust and mental clarity.",time:"Varies",diff:"Medium"},
+  {id:"c04",cat:"confidence",t:"Say No Without Explaining Yourself",d:"One time today. No justification, no apology, just 'No.' Teaches boundaries and self-respect.",time:"1 Day",diff:"Medium"},
+  {id:"c05",cat:"confidence",t:"Walk With Intent for a Full Day",d:"Move as if you know exactly where you're going and why. Walk with purpose, posture, pace.",time:"1 Day",diff:"Easy"},
+  {id:"c06",cat:"confidence",t:"Stop Oversharing for One Full Week",d:"Talk less. Mean more. Charisma is mystery + intention. Pause every time you feel the urge to over-explain.",time:"1 Week",diff:"Hard"},
+  {id:"c07",cat:"confidence",t:"Go to a Live Event Solo",d:"Concert, stand-up, play — alone. Don't fill the discomfort. Own it. Your ability to be solo in public is pure confidence.",time:"Evening",diff:"Hard"},
+  {id:"c08",cat:"confidence",t:"Go to the Cinema Early — Empty Hall",d:"First screening of the day. Empty seats, full movie, complete presence. Own a space with no audience.",time:"Morning",diff:"Easy"},
+  {id:"c09",cat:"confidence",t:"Visit an Unusual Restaurant Alone",d:"New cuisine, new place, no phone. Eat slowly. Observe. Practice being comfortable in unfamiliar environments.",time:"1-2h",diff:"Medium"},
+  {id:"c10",cat:"confidence",t:"Ask for Forgiveness",d:"If there is someone you owe it to — do it. Not for them. For your own closure and integrity.",time:"Varies",diff:"Hard"},
+  {id:"c11",cat:"confidence",t:"Do Good Deeds That Only Benefit Others",d:"Anonymous or direct. Zero personal gain. Do something purely for someone else. Resets your relationship with giving.",time:"1 Day",diff:"Easy"},
+  {id:"c12",cat:"confidence",t:"Order Flowers for Yourself",d:"Buy yourself something beautiful with no occasion. Practicing self-worth without external justification.",time:"30 min",diff:"Easy"},
+
+  /* FOCUS */
+  {id:"f01",cat:"focus",t:"Spend a Full Day Offline",d:"No social media, no news, no streaming. Silence reveals what truly matters when distraction disappears.",time:"Full Day",diff:"Extreme"},
+  {id:"f02",cat:"focus",t:"3-Hour Deep Work Block",d:"One task. Three hours. Phone in another room. No breaks until the block ends. Real output is built in uninterrupted time.",time:"3 Hours",diff:"Extreme"},
+  {id:"f03",cat:"focus",t:"Wake Up at 5am for 3 Days",d:"Use the extra hour only for your most important task. Mornings reveal your default mindset.",time:"3 Days",diff:"Hard"},
+  {id:"f04",cat:"focus",t:"48-Hour Social Media Detox",d:"All platforms. 48 hours. No exceptions. Notice what discomfort this creates — that discomfort is the dependency talking.",time:"48 Hours",diff:"Hard"},
+  {id:"f05",cat:"focus",t:"Day of Total Silence",d:"Speak only when absolutely necessary. Observe how much energy you normally spend on noise.",time:"Full Day",diff:"Extreme"},
+  {id:"f06",cat:"focus",t:"Tech-Free Day",d:"No phone, no laptop, no screens of any kind. Force yourself back into physical reality for a full day.",time:"Full Day",diff:"Hard"},
+  {id:"f07",cat:"focus",t:"Take a Vipassana or Meditation Retreat",d:"10-day silent meditation if possible — or even a single-day guided retreat. Deepest reset you can do.",time:"1–10 Days",diff:"Extreme"},
+  {id:"f08",cat:"focus",t:"Meditation — 20 Minutes Daily for 7 Days",d:"No guided audio. Sit, close eyes, follow breath. 20 minutes. Daily. Non-negotiable.",time:"7 Days",diff:"Hard"},
+
+  /* NETWORK */
+  {id:"n01",cat:"network",t:"Ask One Uncommon Question",d:"Skip 'what do you do?' and ask: 'What are you really into right now but don't post online?' Creates emotional novelty.",time:"1 Convo",diff:"Easy"},
+  {id:"n02",cat:"network",t:"Plant a Seed for the Next Interaction",d:"Tell someone: 'You'd love this concept I came across — remind me next time.' Gives them a reason to want more.",time:"1 Convo",diff:"Easy"},
+  {id:"n03",cat:"network",t:"Reflect Someone Back to Themselves",d:"Listen closely and say: 'You strike me as someone who doesn't say yes easily.' Feeling seen creates instant depth.",time:"1 Convo",diff:"Hard"},
+  {id:"n04",cat:"network",t:"Try a New Place — Talk to the Regulars",d:"New café, barbershop, or local shop. Introduce yourself. Practice initiating connection without agenda.",time:"1-2h",diff:"Medium"},
+  {id:"n05",cat:"network",t:"Volunteer / Give Back to the Community",d:"Charity event, food bank, local initiative. Expanding beyond yourself resets your relationship with abundance.",time:"Half Day",diff:"Medium"},
+  {id:"n06",cat:"network",t:"Attend a Stand-Up Comedy Show",d:"Alone or with one person. Observe how comedians command rooms. Study timing, silence, presence.",time:"Evening",diff:"Easy"},
+  {id:"n07",cat:"network",t:"Go Dancing or Take a Singing Lesson",d:"Move your body or use your voice in a social context. Kills self-consciousness faster than anything else.",time:"1-2h",diff:"Hard"},
+  {id:"n08",cat:"network",t:"Visit a Temple or Cathedral",d:"Any place of historical spiritual significance. Sit quietly. Observe people. Reflect on something larger than yourself.",time:"1-2h",diff:"Easy"},
+
+  /* SELF */
+  {id:"s01",cat:"self",t:"Sit in Silence — 30 Minutes",d:"No phone, no music, no input. Let your mind surface what it's been hiding. Discomfort shows what you're avoiding.",time:"30 min",diff:"Medium"},
+  {id:"s02",cat:"self",t:"Eat Alone in Public — No Phone",d:"Full meal at a restaurant. No phone. No book. Just you and the room. Reveals your need for external validation.",time:"45 min",diff:"Hard"},
+  {id:"s03",cat:"self",t:"Train Without Headphones",d:"Full workout, no music, no podcast. You'll notice the difference between discipline and motivation immediately.",time:"60 min",diff:"Medium"},
+  {id:"s04",cat:"self",t:"Journal Your Worst-Case Scenario",d:"Write your biggest fear in full detail. Don't soften it. Fear shrinks when you face it directly on paper.",time:"20 min",diff:"Easy"},
+  {id:"s05",cat:"self",t:"Write What You'd Want If No One Judged You",d:"Career, lifestyle, relationships — the uncensored version. Truth appears without an audience.",time:"30 min",diff:"Easy"},
+  {id:"s06",cat:"self",t:"Reflect on Past Relationships — Find the Pattern",d:"Write out 3 significant relationships. What pattern do you see in your own behavior?",time:"45 min",diff:"Hard"},
+  {id:"s07",cat:"self",t:"Do Something You're Bad At — Alone",d:"No audience, no help. Ego dissolves when you embrace incompetence in private. Growth begins at discomfort.",time:"1 Hour",diff:"Medium"},
+  {id:"s08",cat:"self",t:"Forgive Someone — Privately",d:"Write a letter you'll never send. Forgive someone completely. This releases weight you didn't know you were carrying.",time:"20 min",diff:"Medium"},
+  {id:"s09",cat:"self",t:"Ask: Who Am I When No One's Watching?",d:"Write the honest answer. Not the curated version. That answer is the real you. Build toward that person.",time:"20 min",diff:"Easy"},
+  {id:"s10",cat:"self",t:"Start a Diary — Keep It for 30 Days",d:"Daily. Private. Raw. No audience. The act of writing every day exposes patterns you can't see in real time.",time:"30 Days",diff:"Hard"},
+  {id:"s11",cat:"self",t:"Write a Letter to Your Future Self",d:"Where do you want to be in 1 year, 5 years? What do you need to hear right now? Seal it and revisit it.",time:"30 min",diff:"Easy"},
+  {id:"s12",cat:"self",t:"Write Your Goals for Life",d:"Not 'goals for this year.' Goals for your entire life. Categories: health, wealth, relationships, legacy, experiences.",time:"45 min",diff:"Easy"},
+  {id:"s13",cat:"self",t:"Make a Family Tree",d:"Trace your lineage as far as you can. Understanding where you come from shifts how you see where you're going.",time:"2-3h",diff:"Medium"},
+  {id:"s14",cat:"self",t:"Take Psychological Personality Tests",d:"MBTI, Big Five, Enneagram, attachment style. Not for labels — for self-understanding and pattern recognition.",time:"1-2h",diff:"Easy"},
+  {id:"s15",cat:"self",t:"Freewrite for 30 Minutes — No Filter",d:"Get a notebook and write whatever comes to mind. Don't edit. Don't re-read. Just let it out. Clears mental noise.",time:"30 min",diff:"Easy"},
+  {id:"s16",cat:"self",t:"Reread an Inspiring Book",d:"One you've already read that changed you. New chapters of your life unlock new meaning in the same words.",time:"Varies",diff:"Easy"},
+  {id:"s17",cat:"self",t:"Visit a Cemetery to Reflect on Time",d:"Sit quietly. Think about mortality, time, legacy. This isn't morbid — it's clarifying. Memento mori.",time:"30-60 min",diff:"Hard"},
+  {id:"s18",cat:"self",t:"Have a Tea Ceremony Alone",d:"Prepare tea with full intention and attention. No distractions. Drink it in total silence. Practice ritual slowness.",time:"30 min",diff:"Easy"},
+  {id:"s19",cat:"self",t:"Learn a Verse or Poem That Moves You",d:"Memorize something beautiful. Not for others — for yourself. Train your memory and your relationship with language.",time:"30-60 min",diff:"Easy"},
+
+  /* EXPERIENCE */
+  {id:"e01",cat:"experience",t:"Watch a Sunrise from a High Point",d:"Mountain, hill, rooftop. Alone. Watch the entire thing start to finish. Few things reset your perspective like this.",time:"Morning",diff:"Medium"},
+  {id:"e02",cat:"experience",t:"Go on a Solo Road Trip",d:"One full day, no fixed destination. You make decisions in real time. Reveals how you handle freedom and uncertainty.",time:"1 Day",diff:"Hard"},
+  {id:"e03",cat:"experience",t:"Explore a New City Alone",d:"No itinerary, no guide. Walk, observe, eat local, get lost. Forces total presence and independence.",time:"Full Day",diff:"Medium"},
+  {id:"e04",cat:"experience",t:"Have a Solo Picnic",d:"Pack food, find a beautiful spot, sit alone with no phone for at least an hour. Practice enjoying your own company.",time:"2-3h",diff:"Easy"},
+  {id:"e05",cat:"experience",t:"Take a Trip Without a Plan",d:"Book transport only. No hotel, no itinerary. Figure it out as you go. The anxiety is the lesson.",time:"1-2 Days",diff:"Extreme"},
+  {id:"e06",cat:"experience",t:"Spend a Night Under the Stars",d:"Camping or rooftop. No artificial light. Sleep outside. Reconnects you with scale, silence, and natural rhythm.",time:"1 Night",diff:"Medium"},
+  {id:"e07",cat:"experience",t:"Take a Scenic Drive Alone",d:"No destination, good music or silence, windows down. Give yourself unstructured movement time.",time:"2-4h",diff:"Easy"},
+  {id:"e08",cat:"experience",t:"Take a Beach Day Alone",d:"No phone after you arrive. Swim, walk, sit. Let the ocean do what oceans do to human anxiety.",time:"Half Day",diff:"Easy"},
+  {id:"e09",cat:"experience",t:"Go to a Play or Concert",d:"Live performance, alone. Full attention, no distraction. Experience art as it was meant — in your body, not on a screen.",time:"Evening",diff:"Easy"},
+  {id:"e10",cat:"experience",t:"Visit a Museum Alone",d:"No rush, no group pace. Stay in front of things that stop you. Let one artwork or exhibit genuinely move you.",time:"2-3h",diff:"Easy"},
+  {id:"e11",cat:"experience",t:"Spend a Day at a Farm",d:"Work with animals or land. Physical, grounding, entirely outside of your usual environment.",time:"Full Day",diff:"Medium"},
+  {id:"e12",cat:"experience",t:"Watch a Documentary About the Planet",d:"Alone, full attention, no phone. Let the scale of the natural world recalibrate your problems.",time:"2h",diff:"Easy"},
+  {id:"e13",cat:"experience",t:"Watch a Cult Movie You've Never Seen",d:"One that's shaped culture. Full attention. Lights off. No pausing.",time:"2-3h",diff:"Easy"},
+  {id:"e14",cat:"experience",t:"Take a Mid-Day Nap — Intentionally",d:"Not because you're exhausted. Because rest is intentional, not a reward. Practice strategic recovery.",time:"45-90 min",diff:"Easy"},
+  {id:"e15",cat:"experience",t:"People-Watch at a Café for 2 Hours",d:"No phone. Just observe people. Their energy, interactions, body language. Trains social perception.",time:"2h",diff:"Easy"},
+  {id:"e16",cat:"experience",t:"Have a Spa / Self-Care Day",d:"Sauna, massage, steam, whatever is available to you. Intentional physical restoration — not a treat, a discipline.",time:"Half Day",diff:"Easy"},
+  {id:"e17",cat:"experience",t:"Take Your 'One Day' on Camera",d:"That thing you keep saying 'one day' about — do it today and document it for yourself. Not for social media.",time:"Varies",diff:"Medium"},
+  {id:"e18",cat:"experience",t:"Go to the Gym Without a Plan",d:"Walk in, do what your body wants. Listen inward. No program, no optimization. Just movement.",time:"60 min",diff:"Easy"},
+
+  /* CREATIVE */
+  {id:"cr01",cat:"creative",t:"Try Painting or Drawing",d:"No talent required. The act of making something with your hands with no utility — pure expression.",time:"1-2h",diff:"Easy"},
+  {id:"cr02",cat:"creative",t:"Create a Vision Board",d:"Physical or digital. Not vague inspiration — specific targets. Where you want to be and what it looks like.",time:"1-2h",diff:"Easy"},
+  {id:"cr03",cat:"creative",t:"Make a Life-Defining Playlist",d:"10 songs that define chapters of your life. Sit and listen to the full thing, in order, with intention.",time:"1-2h",diff:"Easy"},
+  {id:"cr04",cat:"creative",t:"Write a Fictional Story",d:"Even 2 pages. A character, a problem, a resolution. Gets you out of analytical brain entirely.",time:"1-2h",diff:"Medium"},
+  {id:"cr05",cat:"creative",t:"Go Thrift Shopping Alone",d:"New style, no judgment, no budget pressure. Practice choosing things purely because you like them, not for others.",time:"2h",diff:"Easy"},
+  {id:"cr06",cat:"creative",t:"Get Lost in a Bookstore",d:"No list, no recommendations. Walk every aisle. Buy the one that calls you without knowing why.",time:"1-2h",diff:"Easy"},
+  {id:"cr07",cat:"creative",t:"Create a Photo Album",d:"Print or digital. Your best photos, curated, with intention. Your life deserves more than a camera roll.",time:"2-3h",diff:"Easy"},
+  {id:"cr08",cat:"creative",t:"Try Photography",d:"Go out with your phone or camera. Take 50 shots trying to capture something beautiful or true. See differently.",time:"2h",diff:"Easy"},
+  {id:"cr09",cat:"creative",t:"Build Something by Hand",d:"Furniture, food, something in your home. The satisfaction of making a physical thing is irreplaceable.",time:"Varies",diff:"Medium"},
+  {id:"cr10",cat:"creative",t:"Plant Something and Watch It Grow",d:"A plant, herbs, seeds in a pot. Caring for something living teaches patience and builds consistency.",time:"Ongoing",diff:"Easy"},
+  {id:"cr11",cat:"creative",t:"Write Your Own Little Book",d:"10-20 pages. Your philosophy, your story, your advice. Structure it as a book. Clarifies everything you believe.",time:"3-5h",diff:"Hard"},
+  {id:"cr12",cat:"creative",t:"Create a Moodboard for Your Style",d:"Clothing, aesthetics, environments that reflect who you're becoming. Intentional identity building.",time:"1h",diff:"Easy"},
+  {id:"cr13",cat:"creative",t:"Master One Origami Figure",d:"Pick one fold — crane, box, lotus. Practice until it's clean. Teaches patience, precision, and satisfaction in craft.",time:"30-60 min",diff:"Easy"},
+  {id:"cr14",cat:"creative",t:"Sort and Rearrange Your Space",d:"Deep declutter, then intentionally redesign your living or workspace for the person you're becoming.",time:"3-4h",diff:"Medium"},
+  {id:"cr15",cat:"creative",t:"Create a Bucket List",d:"100 items. Experiences, skills, places, achievements, relationships. Force yourself to want things again.",time:"1h",diff:"Easy"},
+  {id:"cr16",cat:"creative",t:"Start a Collection",d:"Books, records, coins, art prints — anything. Curation is a form of identity-building and sustained attention.",time:"Ongoing",diff:"Easy"},
+  {id:"cr17",cat:"creative",t:"Take a Course on Something You're Curious About",d:"Not for a job. Just because you're interested. Reconnects you with the joy of learning for its own sake.",time:"Ongoing",diff:"Medium"},
+  {id:"cr18",cat:"creative",t:"Cook a New Dish from Another Culture",d:"Study the dish, buy real ingredients, cook it properly. Intentional engagement with craft and culture.",time:"2-3h",diff:"Medium"},
+
+  /* SELF — new additions */
+  {id:"s20",cat:"self",t:"Arrange a Full Day of Silence",d:"Speak only when absolutely necessary. Observe how much energy you normally waste on noise and unnecessary words.",time:"Full Day",diff:"Extreme"},
+  {id:"s21",cat:"self",t:"Take Psychological Tests",d:"MBTI, Big Five, Enneagram, attachment style. Not for labels — for self-understanding and honest pattern recognition.",time:"1-2h",diff:"Easy"},
+  {id:"s22",cat:"self",t:"Make a Gratitude List — 50 Items",d:"Push past the obvious 10. The deeper items you find at 30, 40, 50 are the ones that actually rewire your perspective.",time:"45 min",diff:"Easy"},
+  {id:"s23",cat:"self",t:"Remember and Revive an Old Hobby",d:"Something you used to love and drifted from. Spend a full afternoon doing it again, with no agenda.",time:"2-4h",diff:"Easy"},
+  {id:"s24",cat:"self",t:"Write Down Your Life Goals",d:"Not this year's goals. Goals for your entire life — health, wealth, relationships, legacy, and experiences.",time:"45 min",diff:"Easy"},
+  {id:"s25",cat:"self",t:"Have Your Best Bath — Intentionally",d:"Candles, silence, no phone, warm water. Full sensory decompression. Practice treating restoration as a ritual.",time:"45 min",diff:"Easy"},
+  {id:"s26",cat:"self",t:"Create a Motivational Playlist",d:"10–20 tracks that shift your state when you need it most. Intentionally curated — not algorithmically generated.",time:"1h",diff:"Easy"},
+  {id:"s27",cat:"self",t:"Go Through Vipassana",d:"10-day silent meditation retreat if possible — or a single-day guided sit. The deepest mental reset available.",time:"1–10 Days",diff:"Extreme"},
+  {id:"s28",cat:"self",t:"Make a Family Tree",d:"Trace your lineage as far as you can. Understanding where you come from shifts how you see where you're going.",time:"2-3h",diff:"Medium"},
+
+  /* EXPERIENCE — new additions */
+  {id:"e19",cat:"experience",t:"Take Yourself to Your Favourite Restaurant",d:"Dress well. Go alone. Order your favourite thing. Practice being your own best company without any apology.",time:"1-2h",diff:"Medium"},
+  {id:"e20",cat:"experience",t:"Go Stargazing Alone",d:"Drive far from city light pollution. Lie on the ground and look up for 30 minutes. Resets your sense of scale.",time:"Evening",diff:"Medium"},
+  {id:"e21",cat:"experience",t:"Solo Road Trip Without a Fixed Route",d:"Book only the first night if needed. Navigate in real time, eat at random stops. Builds decisiveness and independence.",time:"1-2 Days",diff:"Hard"},
+  {id:"e22",cat:"experience",t:"Solo Hike in Nature",d:"No headphones. Just you, the trail, and whatever thoughts arrive. Physical discomfort clears mental clutter.",time:"3-6h",diff:"Medium"},
+  {id:"e23",cat:"experience",t:"Go Camping Alone",d:"One night. No hotel fallback. Cook your own food, sleep under the sky. Nothing simplifies your mind like nature.",time:"1 Night",diff:"Hard"},
+  {id:"e24",cat:"experience",t:"Watch a Documentary About the Planet",d:"Alone, full attention, no phone. Let the scale of the natural world put your daily anxiety in its proper place.",time:"2h",diff:"Easy"},
+  {id:"e25",cat:"experience",t:"Spend a Day at a Farm",d:"Physical, grounding, entirely outside your usual context. Work with land or animals for a full day.",time:"Full Day",diff:"Medium"},
+  {id:"e26",cat:"experience",t:"Go to a Stand-Up Comedy Show",d:"Alone or with one person. Observe how comedians command rooms, use silence, and create connection.",time:"Evening",diff:"Easy"},
+  {id:"e27",cat:"experience",t:"Visit a Temple or Cathedral Alone",d:"Any place of historical spiritual significance. Sit in silence. Reflect on something larger than your daily concerns.",time:"1-2h",diff:"Easy"},
+  {id:"e28",cat:"experience",t:"Attend a Live Sporting Event Solo",d:"Go alone to a game or match you've never attended live. Immerse fully in the energy without managing anyone else.",time:"3-4h",diff:"Easy"},
+
+  /* CREATIVE — new additions */
+  {id:"cr19",cat:"creative",t:"Create a Style Moodboard",d:"Collect images of clothing, aesthetics and environments that match who you're becoming. Identity is built intentionally.",time:"1h",diff:"Easy"},
+  {id:"cr20",cat:"creative",t:"Have a Solo Tea Ceremony",d:"Prepare tea with complete attention. No distractions. Drink it in total silence. Ritual slowness is a practice.",time:"30 min",diff:"Easy"},
+  {id:"cr21",cat:"creative",t:"Learn a Verse or Poem by Heart",d:"Memorize something that moves you — not for anyone else. Trains memory and builds a deeper relationship with language.",time:"30-60 min",diff:"Easy"},
+  {id:"cr22",cat:"creative",t:"Do Yoga for One Full Week",d:"Morning or evening. Every day. Connects your body and mind in a way that pure gym work does not.",time:"7 Days",diff:"Medium"},
+  {id:"cr23",cat:"creative",t:"Take a Course on Something You're Curious About",d:"Not for a job. Not for money. Just because you're genuinely interested. Reconnects you with the joy of learning.",time:"Ongoing",diff:"Medium"},
+  {id:"cr24",cat:"creative",t:"Write a Letter to Your Past Self",d:"The version of you from 5 years ago. What would you tell them? What do they need to know? Be honest.",time:"30 min",diff:"Easy"},
+  {id:"cr25",cat:"creative",t:"Master a Basic Origami Figure",d:"One fold — crane, lotus, box. Practice until it's clean. Teaches precision, patience, and satisfaction in craft.",time:"30-60 min",diff:"Easy"},
+  {id:"cr26",cat:"creative",t:"Start Collecting Something",d:"Books, records, art prints, coins — anything. Curation is a form of identity-building and sustained, intentional attention.",time:"Ongoing",diff:"Easy"},
+  {id:"cr27",cat:"creative",t:"Go Dancing or Take a Singing Lesson",d:"Move your body or use your voice in a social context. Destroys self-consciousness faster than almost anything else.",time:"1-2h",diff:"Hard"},
+  {id:"cr28",cat:"creative",t:"Declutter and Redesign Your Space",d:"Deep sort first, then intentionally rearrange your living or workspace to reflect who you're becoming — not who you were.",time:"3-4h",diff:"Medium"},
+
+  /* CONFIDENCE — new additions */
+  {id:"c13",cat:"confidence",t:"Go to the Cinema — First Morning Screening",d:"Alone. Empty hall. No one to perform for. Own the entire space. Practice comfort in total solitude.",time:"Morning",diff:"Easy"},
+  {id:"c14",cat:"confidence",t:"Go on a Trip Without a Plan",d:"Book only your transport. No hotel, no itinerary. Figure it out as you go. The anxiety you feel is the lesson.",time:"1-2 Days",diff:"Extreme"},
+  {id:"c15",cat:"confidence",t:"Push Yourself to Your Limit in a Workout",d:"One session. No holding back. Find out where your edge actually is — then go past it by 10%.",time:"60-90 min",diff:"Extreme"},
+  {id:"c16",cat:"confidence",t:"Take Your 'One Day' on Camera",d:"That thing you keep saying 'one day' about — do it today and document it for yourself. Not for social media.",time:"Varies",diff:"Medium"},
+];
+
+/* ─── PRINCIPLES ─── */
+const PRINCIPLES=[
+  {icon:"👁",cat:"Charisma",color:"#a78bfa",title:"The 10 Anti-Charisma Habits",items:[
+    "Trying to impress instead of expressing — charisma dies the moment you perform.",
+    "Avoiding eye contact — intensity is attractive when it's calm.",
+    "Checking your phone when energy gets uncomfortable — discomfort builds presence.",
+    "Oversharing to feel liked — charisma is mystery + intention. Talk less.",
+    "Laughing to fill silence — silence is magnetic when you're grounded.",
+    "Overthinking every word — charisma happens from instinct, not scripts.",
+    "Matching chaos instead of holding your own energy — stabilize, don't mirror.",
+    "Explaining yourself too much — precision feels confident, rambles feel needy.",
+    "Rushing your movements — slow movement signals emotional control.",
+    "Living in your head — your physical presence is your charisma engine.",
+  ]},
+  {icon:"🔒",cat:"Confidence",color:"#f87171",title:"20 Habits That Kill Confidence",items:[
+    "Rehearsing conversations in your head before they happen.",
+    "Trying to say the 'right' thing instead of the honest thing.",
+    "Overanalyzing how you sounded after talking.",
+    "Changing your personality depending on who you're with.",
+    "Apologizing when you did nothing wrong.",
+    "Avoiding speaking first in group situations.",
+    "Comparing yourself in every room you enter.",
+    "Needing approval before making decisions.",
+    "Hiding opinions to avoid conflict.",
+    "Saying yes when you want to say no.",
+    "Assuming people dislike you by default.",
+    "Judging yourself mid-conversation.",
+    "Trying to act confident instead of simply being present.",
+    "Forgetting who you are when you're around others.",
+    "Needing external validation to feel worthy.",
+    "Overthinking messages before sending them.",
+    "Avoiding hard conversations to keep the peace.",
+    "Staying quiet to avoid embarrassment.",
+    "Letting others speak for you.",
+    "Forgetting that most people are thinking about themselves — not you.",
+  ]},
+  {icon:"🌐",cat:"Network",color:"#34d399",title:"Building a Solid Network",items:[
+    "Stop trying to be liked — you're not building connections, you're begging for approval.",
+    "Stop talking to everyone — your network isn't 'bigger' if nobody respects you.",
+    "Stop leading with your title — if you need your job to carry the convo, you're cooked.",
+    "Stop name-dropping — if you were really connected, you wouldn't need to prove it.",
+    "Stop chasing 'popular' people — most can't open a door for you anyway.",
+    "Stop giving free game to people who never act — you're feeding laziness.",
+    "Stop being on-call — always available means always undervalued.",
+    "Stop forcing it — if the energy isn't mutual, you're doing charity.",
+    "Stop trying to impress the room — walk in like you belong, or don't walk in at all.",
+    "Ask uncommon, personal-but-light questions to create emotional novelty.",
+    "End conversations at their high point — leave people wanting more.",
+    "Plant a seed for the next interaction every time you meet someone valuable.",
+    "Have one signature detail about you — people remember quirks more than credentials.",
+    "Reflect people back to themselves — feeling seen creates instant depth.",
+    "Don't fill every silence — controlled pauses signal confidence.",
+  ]},
+  {icon:"⚡",cat:"Respect",color:"#fbbf24",title:"20 Things That Silently Destroy Respect",items:[
+    "Laughing too hard at weak jokes.",
+    "Saying 'sorry' when you've done nothing wrong.",
+    "Talking too fast when you're nervous.",
+    "Letting people cut you off mid-sentence.",
+    "Constantly checking your phone in conversation.",
+    "Oversharing your plans before doing anything.",
+    "Smiling to please instead of meaning it.",
+    "Avoiding eye contact when speaking.",
+    "Talking about goals you never act on.",
+    "Being late but always having an excuse.",
+    "Showing emotion when you should show composure.",
+    "Letting your tone rise when challenged.",
+    "Taking advice from people you wouldn't trade places with.",
+    "Being overly reactive on social media.",
+    "Making promises you can't keep.",
+    "Trying to fit in with people who don't respect you.",
+    "Not walking with intent or posture.",
+    "Being inconsistent — the fastest way to lose authority.",
+    "Letting your standards slide to fit in.",
+    "Chasing attention instead of results.",
+  ]},
+  {icon:"🎯",cat:"Focus & Discipline",color:"#38bdf8",title:"The Discipline Architecture",items:[
+    "Own the first hour of your day — no phone until your main task is complete.",
+    "Set up a daily challenge: one task you don't like but know is important.",
+    "Treat your daily challenge as an opponent — overcome it every day, no exceptions.",
+    "Develop micro-integrity: promise 10 push-ups? Do 10, not 9.",
+    "Accumulating small victories makes your brain trust you again.",
+    "If you miss a task, pay a cost immediately — 100 push-ups, cold shower, remove an app.",
+    "Let laziness sting more than discipline — actions must have repercussions.",
+    "Narrow your options — discipline falters under decision fatigue.",
+    "Wake up at the same time every day — same start creates same momentum.",
+    "A solid routine creates warriors. Chaos creates victims.",
+    "45 minutes of focused work, short break. One task. No multitasking.",
+    "Your environment programs your behavior — design it deliberately.",
+  ]},
+  {icon:"🪞",cat:"Self-Knowledge",color:"#a3e635",title:"20 Things To Do Alone",items:[
+    "Travel somewhere unfamiliar solo — reveals how you make decisions under uncertainty.",
+    "Sit in silence for 30 minutes with no phone — shows what you're avoiding.",
+    "Go on a long walk with no music — your real thoughts surface in the quiet.",
+    "Eat a full meal alone in public — reveals how much you need external validation.",
+    "Make a hard decision without asking anyone — builds self-trust.",
+    "Write out your fears honestly — seeing them on paper removes their power.",
+    "Train alone without headphones — you notice discipline vs motivation.",
+    "Spend a full day offline — shows what truly matters when distraction disappears.",
+    "Sit with boredom instead of escaping it — boredom reveals unmet needs.",
+    "Journal your worst-case scenario — fear shrinks when you face it directly.",
+    "Wake up earlier just to think — mornings reveal your default mindset.",
+    "Watch your reactions, not your intentions — patterns expose who you really are.",
+    "Say no without explaining yourself — teaches boundaries and self-respect.",
+    "Sit in discomfort instead of fixing it — growth happens there.",
+    "Do something you're bad at alone — ego dissolves, growth begins.",
+    "Spend time alone after a big win — separates achievement from identity.",
+    "Write what you want if no one judged you — truth appears without an audience.",
+    "Forgive someone privately — releases weight you didn't know you were carrying.",
+    "Ask yourself: Who am I when no one's watching? That answer is the real you.",
+    "Reflect on past relationships honestly — your patterns become obvious.",
+  ]},
+  {icon:"💬",cat:"Conversations",color:"#f472b6",title:"How to Leave People Wanting More",items:[
+    "Stick to one vivid, specific anecdote. Hint at the rest — 'That was only half the story.'",
+    "Ask uncommon, personal-but-light questions — skip 'what do you do?'",
+    "End the conversation at a high point — 'I've gotta bounce, but I'm glad we talked.'",
+    "Plant a seed for later — 'You'd love this concept, remind me next time.'",
+    "Have one signature detail about you — people remember quirks, not credentials.",
+    "Listen closely and reflect them back — 'You strike me as someone who doesn't say yes easily.'",
+    "Don't fill every silence — a 2-second pause makes people lean in.",
+    "Speak from clarity, not insecurity. Charisma dies the moment you try to perform.",
+    "Talk less. Mean more. Read that again.",
+    "Charisma happens from instinct, not scripts. Speak clean. Trust your delivery.",
+  ]},
+];
+
+/* ═══════════════════════════════════════
+   STATE
+═══════════════════════════════════════ */
+function ls(k,fb={}){try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(fb))}catch{return fb}}
+function ss(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
+
+let ST=ls('p7v2',{tasks:{},fills:{},moods:{},days_done:[],challenges:{},photos:{}});
+let timerSec=0,timerRun=false,timerIv=null;
+
+/* ═══════════════════════════════════════
+   SIDEBAR
+═══════════════════════════════════════ */
+let sbCollapsed=ls('p7_sb_col',false);
+function toggleSidebar(){
+  sbCollapsed=!sbCollapsed;ss('p7_sb_col',sbCollapsed);
+  applyCollapse();
+}
+function applyCollapse(){
+  const sb=document.getElementById('sidebar');
+  const mn=document.getElementById('main');
+  sb.classList.toggle('collapsed',sbCollapsed);
+  mn.classList.toggle('expanded',sbCollapsed);
+}
+function toggleMobileSidebar(){
+  document.getElementById('sidebar').classList.toggle('mobile-open');
+}
+applyCollapse();
+
+function buildSbDays(){
+  const el=document.getElementById('sb-days-list');
+  el.innerHTML=DAYS.map(d=>{
+    const done=ST.days_done.includes(d.id);
+    const unlocked=isDayUnlocked(d.id);
+    const prog=dayProg(d.id);
+    let dotCls='';
+    if(done) dotCls='done';
+    else if(unlocked&&prog.done>0) dotCls='active';
+    return `<div class="sb-item" onclick="openDay(${d.id})" style="${done?'opacity:.6':''}">
+      <span class="sb-icon">${d.emoji}</span>
+      <span class="sb-label" style="font-size:12px">Day ${d.id} — ${d.title}</span>
+      <span class="sb-day-dot ${dotCls}"></span>
+    </div>`;
+  }).join('');
+}
+
+/* ═══════════════════════════════════════
+   NAVIGATION
+═══════════════════════════════════════ */
+function nav(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
+  const map={home:'page-home',days:'page-days',solo:'page-solo',principles:'page-principles',detail:'page-detail'};
+  const el=document.getElementById(map[name]);
+  if(el){el.classList.add('active');}
+  // highlight nav
+  const labels=['home','days','solo','principles'];
+  const idx=labels.indexOf(name);
+  if(idx>=0) document.querySelectorAll('.sb-item')[idx].classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+  if(name==='days'){renderDays();buildSbDays();}
+  if(name==='solo') renderSolo();
+  if(name==='principles') renderPrinciples();
+  updateProgress();
+  // close mobile
+  document.getElementById('sidebar').classList.remove('mobile-open');
+}
+
+/* ═══════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════ */
+function isDayUnlocked(id){return id===1||ST.days_done.includes(id-1);}
+function dayProg(id){
+  const d=DAYS[id-1];
+  const done=d.tasks.filter(t=>ST.tasks[t.id]).length;
+  return{done,total:d.tasks.length,pct:Math.round(done/d.tasks.length*100)};
+}
+
+/* ═══════════════════════════════════════
+   DAYS GRID
+═══════════════════════════════════════ */
+function renderDays(){
+  // streak dots
+  const sr=document.getElementById('streak-row');
+  sr.innerHTML=DAYS.map(d=>{
+    const done=ST.days_done.includes(d.id);
+    return `<div class="s-dot ${done?'done':'todo'}" style="${done?'background:'+d.color+';border:none':''}"></div>`;
+  }).join('');
+
+  const grid=document.getElementById('days-grid');
+  grid.innerHTML='';
+  DAYS.forEach((d,i)=>{
+    const unlocked=isDayUnlocked(d.id);
+    const p=dayProg(d.id);
+    const done=ST.days_done.includes(d.id);
+    let stT='LOCKED',stC='locked';
+    if(done){stT='COMPLETE';stC='complete';}
+    else if(unlocked&&p.done>0){stT='IN PROGRESS';stC='active';}
+    else if(unlocked){stT='READY';stC='available';}
+    const c=document.createElement('div');
+    c.className=`day-card${!unlocked?' locked':''}`;
+    c.style.cssText=`--dc:${d.color};animation-delay:${i*.06}s`;
+    c.innerHTML=`
+      <div class="dc-top"></div>
+      <div class="dc-body">
+        <div class="dc-row1">
+          <div>
+            <div class="dc-day-num">DAY ${d.id}</div>
+            <div class="dc-title">${d.title}</div>
+          </div>
+          <div class="dc-emoji">${d.emoji}</div>
+        </div>
+        <div class="dc-desc">${d.desc.slice(0,100)}…</div>
+        <div class="dc-prog-row"><span>${p.done}/${p.total} tasks</span><span>${p.pct}%</span></div>
+        <div class="dc-prog-bar"><div class="dc-prog-fill" style="width:${p.pct}%"></div></div>
+      </div>
+      <div class="dc-footer">
+        <div class="dc-info">${d.tasks.length} tasks · ${d.fills.length} prompts</div>
+        <div class="dc-status ${stC}">${stT}</div>
+      </div>`;
+    if(unlocked) c.onclick=()=>openDay(d.id);
+    grid.appendChild(c);
+  });
+  updateProgress();
+}
+
+/* ═══════════════════════════════════════
+   DAY DETAIL
+═══════════════════════════════════════ */
+let curDay=null;
+function openDay(id){
+  curDay=id;
+  const d=DAYS[id-1];
+  const p=dayProg(id);
+  const done=ST.days_done.includes(id);
+  document.documentElement.style.setProperty('--dc2',d.color);
+
+  const photos=ST.photos[`d${id}`]||[];
+  const moods=['😤','😐','😊','💪','🔥'];
+  const selMood=ST.moods[`d${id}`]||'';
+
+  document.getElementById('detail-inner').innerHTML=`
+    <div class="detail-head">
+      <div>
+        <div class="dh-eyebrow">DAY ${d.id} / 7</div>
+        <div class="dh-title">${d.title}</div>
+        <div class="dh-quote">${d.quote}</div>
+        <div class="dh-prog">
+          <div class="dh-prog-row"><span>${p.done} of ${p.total} tasks</span><span id="dph-pct">${p.pct}%</span></div>
+          <div class="dh-bar"><div class="dh-fill" id="dph-fill" style="width:${p.pct}%"></div></div>
+        </div>
+      </div>
+      <div class="dh-emoji">${d.emoji}</div>
+    </div>
+
+    <div class="detail-grid">
+      <div class="detail-main">
+
+        <!-- TASKS -->
+        <div class="sc">
+          <div class="sc-head">
+            <div class="sc-title">Daily Tasks</div>
+            <div class="sc-meta" id="tc-${id}">${p.done}/${p.total}</div>
+          </div>
+          <div class="sc-body">
+            <ul class="cl" id="cl-${id}">
+              ${d.tasks.map(t=>{
+                const ck=!!ST.tasks[t.id];
+                return `<li class="cl-item${ck?' checked':''}" onclick="toggleTask('${t.id}',${id})">
+                  <div class="cl-box">
+                    <svg class="cl-check" width="11" height="9" viewBox="0 0 11 9" fill="none">
+                      <path d="M1 4.5L4 7.5L10 1" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                  <div class="cl-text">
+                    <div class="cl-label">${t.l}</div>
+                    <div class="cl-desc">${t.d}</div>
+                  </div>
+                </li>`;
+              }).join('')}
+            </ul>
+          </div>
+        </div>
+
+        <!-- REFLECTION -->
+        <div class="sc">
+          <div class="sc-head"><div class="sc-title">Daily Reflection</div></div>
+          <div class="sc-body">
+            <p style="font-size:12px;color:var(--text2);margin-bottom:16px">Answer honestly. Private. No one sees these but you.</p>
+            ${d.fills.map(f=>`
+              <div class="fill-item">
+                <div class="fill-prompt">${f.p}</div>
+                <textarea class="fill-input" placeholder="${f.ph}" oninput="saveFill('${f.id}',this.value)">${ST.fills[f.id]||''}</textarea>
+              </div>`).join('')}
+          </div>
+        </div>
+
+        <!-- PHOTOS -->
+        <div class="sc">
+          <div class="sc-head"><div class="sc-title">Photo Notes</div></div>
+          <div class="sc-body">
+            <p style="font-size:12px;color:var(--text2);margin-bottom:14px">Capture handwritten notes or reflections.</p>
+            <label class="photo-zone">
+              <input type="file" accept="image/*" multiple onchange="handlePhotos(${id},this)">
+              <div class="pz-icon">📸</div>
+              <div class="pz-text">Tap to upload photos</div>
+              <div class="pz-hint">JPG, PNG, HEIC — saved locally</div>
+            </label>
+            <div class="photo-grid" id="pg-${id}">
+              ${photos.map((ph,i)=>`
+                <div class="photo-thumb">
+                  <img src="${ph}">
+                  <button class="photo-del" onclick="delPhoto(${id},${i})">✕</button>
+                </div>`).join('')}
+            </div>
+          </div>
+        </div>
+
+        <!-- COMPLETE BUTTON -->
+        <button class="complete-btn ${done?'done':''}" id="cb-${id}"
+          onclick="completeDay(${id})" ${!done&&p.done<p.total?'disabled':''}>
+          ${done?'✓ Day Complete':`Complete Day ${id}`}
+          ${!done&&p.done<p.total?'<span style="font-size:11px;opacity:.5;margin-left:4px">(finish all tasks first)</span>':''}
+        </button>
+      </div>
+
+      <div class="detail-side">
+        <!-- TIMER -->
+        <div class="widget">
+          <div class="w-head">${d.timer.label}</div>
+          <div class="w-body">
+            <div class="timer-wrap">
+              <div class="timer-display" id="td">${fmt(d.timer.min*60)}</div>
+              <div class="timer-btns">
+                <button class="t-btn" onclick="startTmr(${d.timer.min})">Start</button>
+                <button class="t-btn" onclick="pauseTmr()">Pause</button>
+                <button class="t-btn" onclick="resetTmr(${d.timer.min})">Reset</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- REVIEW -->
+        <div class="widget">
+          <div class="w-head">Day Review</div>
+          <div class="w-body">
+            <div class="score-wrap">
+              <div class="score-ring">
+                <div class="score-num" id="sn-${id}">${p.pct}</div>
+                <div class="score-lbl">SCORE</div>
+              </div>
+            </div>
+            <p style="font-size:11px;color:var(--text2);text-align:center;margin-bottom:4px">${d.review}</p>
+            <div class="mood-row">
+              ${moods.map(m=>`<button class="mood-btn${selMood===m?' sel':''}" onclick="saveMood(${id},'${m}',this)">${m}</button>`).join('')}
+            </div>
+          </div>
+        </div>
+
+        <!-- STATS -->
+        <div class="widget">
+          <div class="w-head">Summary</div>
+          <div class="w-body">
+            <div class="mini-stats">
+              <div class="ms-box"><div class="ms-num" id="ms-t-${id}">${p.done}</div><div class="ms-lbl">Tasks</div></div>
+              <div class="ms-box"><div class="ms-num">${d.fills.length}</div><div class="ms-lbl">Prompts</div></div>
+              <div class="ms-box"><div class="ms-num" id="ms-p-${id}">${photos.length}</div><div class="ms-lbl">Photos</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- INSIGHT -->
+        <div class="widget">
+          <div class="w-head">Today's Insight</div>
+          <div class="w-body">
+            <p class="insight-text">${d.insight}</p>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  resetTmr(d.timer.min);
+  nav('detail');
+}
+
+/* ═══════════════════════════════════════
+   TASK / FILL / MOOD
+═══════════════════════════════════════ */
+function toggleTask(tid,did){
+  ST.tasks[tid]=!ST.tasks[tid];ss('p7v2',ST);
+  const item=document.querySelector(`.cl-item[onclick*="'${tid}'"]`);
+  if(item) item.classList.toggle('checked',ST.tasks[tid]);
+  const p=dayProg(did);
+  const fill=document.getElementById('dph-fill');
+  const pct=document.getElementById('dph-pct');
+  const tc=document.getElementById(`tc-${did}`);
+  const sn=document.getElementById(`sn-${did}`);
+  const mst=document.getElementById(`ms-t-${did}`);
+  if(fill) fill.style.width=p.pct+'%';
+  if(pct) pct.textContent=p.pct+'%';
+  if(tc) tc.textContent=`${p.done}/${p.total}`;
+  if(sn) sn.textContent=p.pct;
+  if(mst) mst.textContent=p.done;
+  // enable/disable complete btn
+  const cb=document.getElementById(`cb-${did}`);
+  if(cb&&!ST.days_done.includes(did)){
+    cb.disabled=p.done<p.total;
+    cb.innerHTML=`Complete Day ${did}${p.done<p.total?' <span style="font-size:11px;opacity:.5;margin-left:4px">(finish all tasks first)</span>':''}`;
+  }
+  if(ST.tasks[tid]) toast('✓ Task complete');
+  updateProgress();
+}
+
+function saveFill(fid,val){ST.fills[fid]=val;ss('p7v2',ST);}
+function saveMood(did,m,btn){
+  ST.moods[`d${did}`]=m;ss('p7v2',ST);
+  btn.closest('.mood-row').querySelectorAll('.mood-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  toast('Mood saved ✓');
+}
+
+/* ═══════════════════════════════════════
+   COMPLETE DAY
+═══════════════════════════════════════ */
+function completeDay(did){
+  if(ST.days_done.includes(did)) return;
+  const p=dayProg(did);
+  if(p.done<p.total){toast('Complete all tasks first!');return;}
+  ST.days_done.push(did);ss('p7v2',ST);
+  const cb=document.getElementById(`cb-${did}`);
+  if(cb){cb.classList.add('done');cb.innerHTML='✓ Day Complete';}
+  burst();
+  toast(`🔥 Day ${did} complete!${did<7?' Day '+(did+1)+' unlocked!':' Protocol finished!'}`);
+  buildSbDays();
+  setTimeout(()=>nav('days'),2400);
+}
+
+/* ═══════════════════════════════════════
+   PHOTOS
+═══════════════════════════════════════ */
+function handlePhotos(did,inp){
+  if(!ST.photos[`d${did}`]) ST.photos[`d${did}`]=[];
+  Array.from(inp.files).forEach(f=>{
+    const r=new FileReader();
+    r.onload=e=>{ST.photos[`d${did}`].push(e.target.result);ss('p7v2',ST);renderPhotoGrid(did);};
+    r.readAsDataURL(f);
+  });
+}
+function delPhoto(did,idx){
+  ST.photos[`d${did}`].splice(idx,1);ss('p7v2',ST);renderPhotoGrid(did);toast('Photo removed');
+}
+function renderPhotoGrid(did){
+  const g=document.getElementById(`pg-${did}`);
+  if(!g) return;
+  const ph=ST.photos[`d${did}`]||[];
+  g.innerHTML=ph.map((p,i)=>`<div class="photo-thumb"><img src="${p}"><button class="photo-del" onclick="delPhoto(${did},${i})">✕</button></div>`).join('');
+  const ms=document.getElementById(`ms-p-${did}`);
+  if(ms) ms.textContent=ph.length;
+}
+
+/* ═══════════════════════════════════════
+   TIMER
+═══════════════════════════════════════ */
+function fmt(s){const m=Math.floor(s/60).toString().padStart(2,'0');return `${m}:${(s%60).toString().padStart(2,'0')}`}
+function startTmr(def){
+  if(timerRun) return;
+  if(timerSec<=0) timerSec=def*60;
+  timerRun=true;
+  const el=document.getElementById('td');
+  timerIv=setInterval(()=>{
+    timerSec--;
+    if(el) el.textContent=fmt(timerSec);
+    if(timerSec<=0){clearInterval(timerIv);timerRun=false;if(el)el.textContent='DONE!';burst();toast('⏱ Focus block complete!');}
+  },1000);
+}
+function pauseTmr(){clearInterval(timerIv);timerRun=false;}
+function resetTmr(def){clearInterval(timerIv);timerRun=false;timerSec=def*60;const el=document.getElementById('td');if(el)el.textContent=fmt(timerSec);}
+
+/* ═══════════════════════════════════════
+   SOLO
+═══════════════════════════════════════ */
+let soloFilter='all';
+function filterSolo(cat,btn){
+  soloFilter=cat;
+  document.querySelectorAll('.cat-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderSolo();
+}
+function renderSolo(){
+  const grid=document.getElementById('solo-grid');
+  const catColors={confidence:'var(--csolo)',focus:'var(--cfocus)',network:'var(--cnet)',self:'var(--cself)',experience:'#fb923c',creative:'#c084fc'};
+  const list=soloFilter==='all'?CHALLENGES:CHALLENGES.filter(c=>c.cat===soloFilter);
+  grid.innerHTML='';
+  list.forEach((ch,i)=>{
+    const done=!!ST.challenges[ch.id];
+    const col=catColors[ch.cat]||'var(--csolo)';
+    const c=document.createElement('div');
+    c.className='ch-card';
+    c.style.animationDelay=`${i*.04}s`;
+    c.innerHTML=`
+      <div class="ch-top" style="background:${col}"></div>
+      <div class="ch-body">
+        <div class="ch-cat" style="color:${col}">${ch.cat.toUpperCase()}</div>
+        <div class="ch-title">${ch.t}</div>
+        <div class="ch-desc">${ch.d}</div>
+        <div class="ch-tags">
+          <span class="ch-tag">⏱ ${ch.time}</span>
+          <span class="ch-tag">📊 ${ch.diff}</span>
+        </div>
+      </div>
+      <div class="ch-footer">
+        <div class="ch-num">#${ch.id}</div>
+        <button class="ch-done-btn${done?' done':''}" onclick="toggleChallenge('${ch.id}',this)">
+          ${done?'✓ Done':'Mark Complete'}
+        </button>
+      </div>`;
+    grid.appendChild(c);
+  });
+}
+function toggleChallenge(id,btn){
+  ST.challenges[id]=!ST.challenges[id];ss('p7v2',ST);
+  btn.classList.toggle('done',ST.challenges[id]);
+  btn.textContent=ST.challenges[id]?'✓ Done':'Mark Complete';
+  if(ST.challenges[id]){toast('💪 Challenge complete!');burst();}
+  updateProgress();
+}
+
+/* ═══════════════════════════════════════
+   PRINCIPLES — COLLAPSIBLE
+═══════════════════════════════════════ */
+function renderPrinciples(){
+  const grid=document.getElementById('principles-grid');
+  grid.innerHTML='';
+  PRINCIPLES.forEach((p,i)=>{
+    const el=document.createElement('div');
+    el.className='pcat';
+    el.style.cssText=`--principles-color:${p.color};animation-delay:${i*.07}s`;
+    el.innerHTML=`
+      <div class="pcat-header" onclick="togglePcat(this)">
+        <div class="pcat-left">
+          <div class="pcat-icon">${p.icon}</div>
+          <div>
+            <div class="pcat-cat">${p.cat}</div>
+            <div class="pcat-title">${p.title}</div>
+          </div>
+        </div>
+        <div class="pcat-right">
+          <div class="pcat-count">${p.items.length} principles</div>
+          <div class="pcat-chevron">▾</div>
+        </div>
+      </div>
+      <div class="pcat-body">
+        <ul class="p-list">
+          ${p.items.map(it=>`<li>${it}</li>`).join('')}
+        </ul>
+      </div>`;
+    grid.appendChild(el);
+  });
+}
+function togglePcat(header){
+  const block=header.closest('.pcat');
+  block.classList.toggle('open');
+}
+
+/* ═══════════════════════════════════════
+   PROGRESS / XP
+═══════════════════════════════════════ */
+function updateProgress(){
+  let tot=0,done=0;
+  DAYS.forEach(d=>{d.tasks.forEach(t=>{tot++;if(ST.tasks[t.id])done++;});});
+  const pct=tot>0?Math.round(done/tot*100):0;
+  const ob=document.getElementById('ob-fill');
+  const obp=document.getElementById('ob-pct');
+  if(ob) ob.style.width=pct+'%';
+  if(obp) obp.textContent=pct+'%';
+  const sf=document.getElementById('sb-prog-fill');
+  const sp=document.getElementById('sb-pct');
+  if(sf) sf.style.width=pct+'%';
+  if(sp) sp.textContent=pct+'%';
+}
+
+/* ═══════════════════════════════════════
+   TOAST + BURST
+═══════════════════════════════════════ */
+let toastT=null;
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2600);
+}
+function burst(){
+  const e=['⚡','🔥','✨','💫','🎯','💪','🏆','⭐'];
+  for(let i=0;i<14;i++) setTimeout(()=>{
+    const d=document.createElement('div');
+    d.className='cfetti';
+    d.textContent=e[Math.floor(Math.random()*e.length)];
+    d.style.cssText=`left:${Math.random()*window.innerWidth}px;top:${window.innerHeight*.65}px`;
+    document.body.appendChild(d);
+    setTimeout(()=>d.remove(),1500);
+  },i*70);
+}
+
+/* ═══════════════════════════════════════
+   INIT
+═══════════════════════════════════════ */
+updateProgress();
+</script>
+</body>
+</html>
